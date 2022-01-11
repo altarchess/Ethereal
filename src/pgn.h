@@ -28,4 +28,4 @@ typedef struct PGNData {
     char buffer[65536];
 } PGNData;
 
-void process_pgn(const char *fname);
+void process_pgn(const char *fname, const char *outname);

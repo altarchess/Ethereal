@@ -19,3 +19,4 @@
 #pragma once
 
 void handleCommandLine(int argc, char **argv);
+void output_halfkp_position(FILE *fout, Board *board, int eval, int result);

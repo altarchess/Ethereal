@@ -267,6 +267,29 @@ static void buildHalfKPBook(int argc, char **argv) {
 }
 
 
+void output_halfkp_position(FILE *fout, Board *board, int eval, int result) {
+
+    HalfKPSample sample = {0};
+
+    uint64_t white  = board->colours[WHITE];
+    uint64_t black  = board->colours[BLACK];
+    uint64_t pieces = (white | black);
+
+    sample.occupied = pieces & ~board->pieces[KING];
+    sample.eval     = eval;
+    sample.result   = result;
+    sample.turn     = board->turn;
+    sample.wking    = getlsb(white & board->pieces[KING]);
+    sample.bking    = getlsb(black & board->pieces[KING]);
+    packBitboard(sample.packed, board, sample.occupied);
+
+    sample.eval   = sample.turn ? -sample.eval : sample.eval;
+    sample.result = sample.turn ? 2u - sample.result : sample.result;
+
+    fwrite(&sample, sizeof(HalfKPSample), 1, fout);
+}
+
+
 void handleCommandLine(int argc, char **argv) {
 
     // Output all the wonderful things we can do from the Command Line
@@ -317,8 +340,8 @@ void handleCommandLine(int argc, char **argv) {
 
     // Convert a PGN file to a list of FENs with results and evals
     // USAGE: ./Ethereal pgnfen <input>
-    if (argc > 2 && strEquals(argv[1], "pgnfen")) {
-        process_pgn(argv[2]);
+    if (argc > 3 && strEquals(argv[1], "pgnfen")) {
+        process_pgn(argv[2], argv[3]);
         exit(EXIT_SUCCESS);
     }
 

@@ -26,6 +26,7 @@
 #include "attacks.h"
 #include "bitboards.h"
 #include "board.h"
+#include "cmdline.h"
 #include "move.h"
 #include "pgn.h"
 
@@ -261,14 +262,12 @@ static bool pgn_read_headers(FILE *pgn, PGNData *data) {
     return data->buffer[0] == '[';
 }
 
-static void pgn_read_moves(FILE *pgn, PGNData *data, Board *board) {
+static void pgn_read_moves(FILE *pgn, FILE *fout, PGNData *data, Board *board) {
 
     Undo undo;
     double feval;
     uint16_t move;
     int eval, index = 0;
-
-    char fen[128], *lookup[3] = { "0.0", "0.5", "1.0" };
 
     if (fgets(data->buffer, 65536, pgn) == NULL)
         return;
@@ -292,10 +291,8 @@ static void pgn_read_moves(FILE *pgn, PGNData *data, Board *board) {
         if (board->turn == BLACK) eval = -eval;
 
         // Ethereal NNUE data formatting to build FENs
-        if (-1000 <= eval && eval <= 1000 && !board->kingAttackers) {
-            boardToFEN(board, fen);
-            printf("%s [%s] %d\n", fen, lookup[data->result], eval);
-        }
+        if (abs(eval) <= 1000 && !board->kingAttackers && !moveIsTactical(board, move))
+            output_halfkp_position(fout, board, eval, data->result);
 
         // Skip head to the end of this comment to prepare for the next Move
         index = pgn_read_until_space(data->buffer, index+1); data->plies++;
@@ -303,7 +300,7 @@ static void pgn_read_moves(FILE *pgn, PGNData *data, Board *board) {
     }
 }
 
-static bool process_next_pgn(FILE *pgn, PGNData *data, Board *board) {
+static bool process_next_pgn(FILE *pgn, FILE *fout, PGNData *data, Board *board) {
 
     // Make sure to cleanup previous PGNs
     if (data->startpos != NULL)
@@ -325,7 +322,7 @@ static bool process_next_pgn(FILE *pgn, PGNData *data, Board *board) {
     boardFromFEN(board, data->startpos, 0);
 
     // Read Result & Fen and skip to Moves
-    pgn_read_moves(pgn, data, board);
+    pgn_read_moves(pgn, fout, data, board);
 
     // Skip the trailing Newline of each PGN
     fgets(data->buffer, 65536, pgn);
@@ -334,10 +331,13 @@ static bool process_next_pgn(FILE *pgn, PGNData *data, Board *board) {
 }
 
 
-void process_pgn(const char *fname) {
+void process_pgn(const char *fname, const char *outname) {
+
     Board board;
-    FILE *pgn = fopen(fname, "r");
+    FILE *pgn  = fopen(fname, "r");
+    FILE *fout = fopen(outname, "wb");
     PGNData *data = calloc(1, sizeof(PGNData));
-    while (process_next_pgn(pgn, data, &board));
-    fclose(pgn); free(data);
+
+    while (process_next_pgn(pgn, fout, data, &board));
+    fclose(pgn); fclose(fout); free(data);
 }
