@@ -269,6 +269,8 @@ static void pgn_read_moves(FILE *pgn, FILE *fout, PGNData *data, Board *board) {
     uint16_t move;
     int eval, index = 0;
 
+    char fen[128], *lookup[3] = { "0.0", "0.5", "1.0" };
+
     if (fgets(data->buffer, 65536, pgn) == NULL)
         return;
 
@@ -291,8 +293,10 @@ static void pgn_read_moves(FILE *pgn, FILE *fout, PGNData *data, Board *board) {
         if (board->turn == BLACK) eval = -eval;
 
         // Ethereal NNUE data formatting to build FENs
-        if (abs(eval) <= 1000 && !board->kingAttackers && !moveIsTactical(board, move))
-            output_halfkp_position(fout, board, eval, data->result);
+        if (abs(eval) <= 1000 && !board->kingAttackers && !moveIsTactical(board, move)) {
+            boardToFEN(board, fen);
+            printf("%s [%s] %d\n", fen, lookup[data->result], eval);
+        }
 
         // Skip head to the end of this comment to prepare for the next Move
         index = pgn_read_until_space(data->buffer, index+1); data->plies++;
