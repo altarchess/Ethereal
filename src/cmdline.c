@@ -44,9 +44,9 @@ typedef struct PSQBBSample {
 
 typedef struct HalfKPSample {
     uint64_t occupied;   // 8-byte occupancy bitboard ( No Kings )
-    int16_t  ply;        // 2-byte int for the current move ply
-    uint8_t  plies;      // 2-byte int for the total game length
-    uint8_t  eval;       // 2-byte int for the target evaluation
+    int16_t  eval;       // 2-byte int for the target evaluation
+    uint8_t  ply;        // 1-byte int for the current move ply
+    uint8_t  plies;      // 1-byte int for the total game length
     uint8_t  result;     // 1-byte int for result. { L=0, D=1, W=2 }
     uint8_t  turn;       // 1-byte int for the side-to-move flag
     uint8_t  wking;      // 1-byte int for the White King Square
@@ -243,6 +243,13 @@ static void buildHalfKPBook(int argc, char **argv) {
         uint64_t black  = board.colours[BLACK];
         uint64_t pieces = (white | black);
 
+        sample.occupied = pieces & ~board.pieces[KING];
+        sample.result   = strstr(line, "[0.0]") ? 0u : strstr(line, "[0.5]") ? 1u : 2u;
+        sample.turn     = board.turn;
+        sample.wking    = getlsb(white & board.pieces[KING]);
+        sample.bking    = getlsb(black & board.pieces[KING]);
+        packBitboard(sample.packed, &board, sample.occupied);
+
         token = strtok(line, sep); // Board Encoding
         token = strtok(NULL, sep); // Side-to-move
         token = strtok(NULL, sep); // Castle Rights
@@ -256,13 +263,6 @@ static void buildHalfKPBook(int argc, char **argv) {
         sample.plies = cap_ply_value(atoi(strtok(NULL, sep)));
 
         (void) token; // Silence compiler warnings
-
-        sample.occupied = pieces & ~board.pieces[KING];
-        sample.result   = strstr(line, "[0.0]") ? 0u : strstr(line, "[0.5]") ? 1u : 2u;
-        sample.turn     = board.turn;
-        sample.wking    = getlsb(white & board.pieces[KING]);
-        sample.bking    = getlsb(black & board.pieces[KING]);
-        packBitboard(sample.packed, &board, sample.occupied);
 
         sample.eval   = sample.turn ? -sample.eval : sample.eval;
         sample.result = sample.turn ? 2u - sample.result : sample.result;
