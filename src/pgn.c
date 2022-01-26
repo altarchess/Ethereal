@@ -281,6 +281,9 @@ static void pgn_read_moves(FILE *pgn, PGNData *data, PGNEntry *entries, Board *b
         if (data->buffer[index] == '\0') break;
         move = parse_san(board, data->buffer + index);
 
+        //
+        if (placed) entries[placed-1].use = moveIsTactical(board, move);
+
         // Assume that each move has an associated score
         index = pgn_read_until_space(data->buffer, index);
 
@@ -301,10 +304,6 @@ static void pgn_read_moves(FILE *pgn, PGNData *data, PGNEntry *entries, Board *b
         entries[placed].ply  = data->plies;
         entries[placed].use  = !board->kingAttackers;
         boardToFEN(board, entries[placed++].fen);
-
-        // Disable the position before this one if our best move is tactical
-        if (placed - 2 >= 0 && moveIsTactical(board, move))
-            entries[placed - 2].use = 0;
     }
 
     for (int i = 0; i < placed - 1; i++)
