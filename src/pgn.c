@@ -292,18 +292,22 @@ static void pgn_read_moves(FILE *pgn, PGNData *data, PGNEntry *entries, Board *b
         // Use White's POV for all evaluations
         if (board->turn == BLACK) eval = -eval;
 
-        // Save each potential position for later
-        entries[placed].eval = eval;
-        entries[placed].ply  = data->plies;
-        entries[placed].use  = !board->kingAttackers && !moveIsTactical(board, move);
-        boardToFEN(board, entries[placed++].fen);
-
         // Skip head to the end of this comment to prepare for the next Move
         index = pgn_read_until_space(data->buffer, index+1); data->plies++;
         applyMove(board, move, &undo);
+
+        // Save each potential position for later
+        entries[placed].eval = eval;
+        entries[placed].ply  = data->plies;
+        entries[placed].use  = !board->kingAttackers;
+        boardToFEN(board, entries[placed++].fen);
+
+        // Disable the position before this one if our best move is tactical
+        if (placed - 2 >= 0 && moveIsTactical(board, move))
+            entries[placed - 2].use = 0;
     }
 
-    for (int i = 0; i < placed; i++)
+    for (int i = 0; i < placed - 1; i++)
         if (entries[i].use && abs(entries[i].eval) <= 2000)
             printf(format, entries[i].fen, lookup[data->result], entries[i].eval, entries[i].ply, data->plies);
 }
