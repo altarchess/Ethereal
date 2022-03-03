@@ -402,12 +402,18 @@ int search(Thread *thread, PVariation *pv, int alpha, int beta, int depth) {
     eval = thread->states[thread->height].eval = inCheck ? VALUE_NONE
          : ttEval != VALUE_NONE ? ttEval : evaluateBoard(thread, board);
 
+    // Improving if our static eval increased in the last move
+    improving = !inCheck && eval > thread->states[thread->height-2].eval;
+
+    if (   ttHit
+        && ttValue != VALUE_NONE
+        && abs(ttValue) < TBWIN
+        && ttBound & (ttValue > eval ? BOUND_LOWER : BOUND_UPPER))
+        eval = ttValue;
+
     // Static Exchange Evaluation Pruning Margins
     seeMargin[0] = SEENoisyMargin * depth * depth;
     seeMargin[1] = SEEQuietMargin * depth;
-
-    // Improving if our static eval increased in the last move
-    improving = !inCheck && eval > thread->states[thread->height-2].eval;
 
     // Reset Killer moves for our children
     thread->killers[thread->height+1][0] = NONE_MOVE;
